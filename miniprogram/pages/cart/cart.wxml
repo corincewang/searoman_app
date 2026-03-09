@@ -1,12 +1,29 @@
 <view class="page">
-  <view class="list" wx:if="{{items.length > 0}}">
-    <view class="item" wx:for="{{items}}" wx:key="id">
-      <text class="name">{{item.nameCn}}</text>
-      <text class="spec">{{item.color}} {{item.size}} ¥{{item.price}} ×{{item.totalQty}} 金额 ¥{{item.amount}}</text>
+  <view class="list" wx:if="{{groups.length > 0}}">
+    <view class="shop-group" wx:for="{{groups}}" wx:key="shopNo">
+      <view class="shop-header">
+        <text class="shop-name">{{item.shopNo}}</text>
+        <text class="shop-arrow">›</text>
+      </view>
+      <view class="shop-items">
+        <view class="item" wx:for="{{item.items}}" wx:for-item="prod" wx:key="id" data-id="{{prod.id}}" bindtap="goDetail">
+          <view class="thumb">
+            <image wx:if="{{prod.photo}}" src="{{prod.photo}}" mode="aspectFill"/>
+            <view wx:else class="placeholder">暂无图</view>
+          </view>
+          <view class="info">
+            <text class="name">{{prod.nameCn}}</text>
+            <text class="attrs">{{prod.color || ''}}{{prod.color && prod.size ? ' ' : ''}}{{prod.size || ''}}</text>
+            <view class="row"><text class="label">箱数</text><text class="value">{{prod.cartons}}</text></view>
+            <view class="row"><text class="label">总数</text><text class="value">×{{prod.totalQty}}</text></view>
+            <view class="row amount"><text class="label">金额</text><text class="value">¥{{prod.amount}}</text></view>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
-  <view class="empty" wx:else>购物车为空，去列表加购</view>
-  <view class="bottom-bar" wx:if="{{items.length > 0}}">
-    <button bindtap="exportExcel">导出 Excel</button>
+  <view class="empty" wx:else>购物车为空，去首页加购</view>
+  <view class="bottom-bar" wx:if="{{groups.length > 0}}">
+    <button class="btn-export" bindtap="exportExcel">导出 Excel</button>
   </view>
 </view>

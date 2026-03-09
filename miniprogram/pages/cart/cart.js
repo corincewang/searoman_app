@@ -5,10 +5,26 @@ Page({
     items: []
   },
 
+  goDetail(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id) return
+    wx.navigateTo({ url: '/pages/detail/detail?id=' + encodeURIComponent(id) })
+  },
+
   onShow() {
     const app = getApp()
     const items = (app.globalData && app.globalData.cart) || []
-    this.setData({ items })
+    const groups = []
+    const map = {}
+    items.forEach(it => {
+      const key = it.shopNo || '其他'
+      if (!map[key]) {
+        map[key] = { shopNo: key, items: [] }
+        groups.push(map[key])
+      }
+      map[key].items.push(it)
+    })
+    this.setData({ items, groups })
   },
 
   exportExcel() {
