@@ -1,0 +1,45 @@
+<view class="page">
+  <!-- 筛选栏 -->
+  <view class="toolbar">
+    <view class="sort">
+      <text class="label">排序：</text>
+      <text class="tab {{sortBy === 'time' ? 'active' : ''}}" data-sort="time" bindtap="onSortChange">按时间</text>
+      <text class="tab {{sortBy === 'category' ? 'active' : ''}}" data-sort="category" bindtap="onSortChange">按类别</text>
+    </view>
+    <view class="filter">
+      <checkbox-group bindchange="onFilterNewWeek">
+        <label><checkbox value="week"/>近一周新品</label>
+      </checkbox-group>
+    </view>
+  </view>
+
+  <!-- 淘宝式卡片列表 -->
+  <view class="list" wx:if="{{products.length > 0}}">
+    <view
+      class="card"
+      wx:for="{{products}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="thumb">
+        <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill"/>
+        <view wx:else class="placeholder">暂无图</view>
+      </view>
+      <view class="info">
+        <text class="name">{{item.nameCn}}</text>
+        <text class="spec">{{item.color || ''}} {{item.size || ''}}</text>
+        <view class="row">
+          <text class="price">¥{{item.price}}</text>
+          <text class="qty">×{{item.totalQty || (item.cartons * item.pcsInCarton)}}</text>
+        </view>
+        <text class="shop">店铺 {{item.shopNo}} 货号 {{item.itemNo}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <text>暂无商品，请到「上传」tab 上传装箱单 Excel</text>
+    <button type="primary" bindtap="goUpload">去上传</button>
+  </view>
+</view>

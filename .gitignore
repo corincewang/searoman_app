@@ -1,0 +1,23 @@
+# 依赖
+node_modules/
+
+# 微信小程序构建产物
+miniprogram_npm/
+
+# 开发者工具 / IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 日志 / 临时
+*.log
+.npm
+.cache
