@@ -4,7 +4,6 @@ Page({
     cartons: 1,
     totalQty: 0,
     amount: 0,
-    detailExpanded: false,
     statusBarHeight: 20
   },
 
@@ -34,10 +33,6 @@ Page({
 
   goBack() {
     wx.navigateBack()
-  },
-
-  toggleDetail() {
-    this.setData({ detailExpanded: !this.data.detailExpanded })
   },
 
   onCartonsChange(e) {

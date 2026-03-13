@@ -9,7 +9,7 @@
     <view class="nav-right"></view>
   </view>
 
-  <!-- 顶部：图+名称/单价/货号/外箱尺寸（货号只在此处显示） -->
+  <!-- 顶部：图+名称/单价，下面 货号 Item、规格 size、证书（醒目色）+ 小字 -->
   <view class="header-card">
     <view class="thumb">
       <image wx:if="{{product.photo}}" src="{{product.photo}}" mode="aspectFill"/>
@@ -19,16 +19,40 @@
       <text class="name">{{product.nameCn}}</text>
       <text class="price">¥{{product.price}}</text>
       <view class="meta">
-        <text class="item">货号: {{product.itemNo}}{{product.size ? ' ' + product.size : ''}}</text>
-        <text class="item">外箱尺寸(长×宽×高/cm): {{product.cartonLongCm || '-'}}×{{product.cartonWideCm || '-'}}×{{product.cartonHighCm || '-'}}</text>
+        <text class="item">货号 Item: {{product.itemNo}}</text>
+        <text class="item">规格 size: {{product.size || '-'}}</text>
+        <view class="cert-block">
+          <text class="item cert">证书类型及代码 certificate & code: {{product.certificate || '-'}}</text>
+          <text class="cert-note">*商店可以提供证书</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 数量选择：总箱数、每箱数量、购买数量 -->
+  <!-- 详情直接展示，按 Excel 顺序，中英文标签 -->
+  <view class="detail-section">
+    <view class="row"><text class="label">店铺 shop No</text><text class="value">{{product.shopNo}}</text></view>
+    <view class="row"><text class="label">条形码 Bar code</text><text class="value">{{product.barcode || '-'}}</text></view>
+    <view class="row"><text class="label">颜色 Color</text><text class="value">{{product.color || '-'}}</text></view>
+    <view class="row"><text class="label">材质 Material</text><text class="value">{{product.material || '-'}}</text></view>
+    <view class="row"><text class="label">单箱毛重 gross weight(KG)</text><text class="value">{{product.grossWeightKg != null ? product.grossWeightKg : '-'}}</text></view>
+    <view class="row"><text class="label">箱规 long×wide×high(cm)</text><text class="value">{{product.cartonLongCm || '-'}}×{{product.cartonWideCm || '-'}}×{{product.cartonHighCm || '-'}}</text></view>
+    <view class="row"><text class="label">单箱体积 cube(m³)</text><text class="value">{{product.cubeM3 != null ? product.cubeM3 : '-'}}</text></view>
+    <view class="row cert-row">
+      <text class="label">证书类型及代码 certificate & code</text>
+      <text class="value cert-value">{{product.certificate || '-'}}</text>
+    </view>
+    <text class="cert-note-block">*商店可以提供证书</text>
+    <view class="row amount-row">
+      <text class="label">金额 Amount</text>
+      <text class="value highlight">¥{{amount != null ? amount : '0'}}</text>
+    </view>
+  </view>
+
+  <!-- 最下面：总箱数、每箱数量、购买数量（带英文） -->
   <view class="quantity-section">
     <view class="q-row">
-      <text class="q-label">总箱数</text>
+      <text class="q-label">总箱数 Total cartons</text>
       <view class="stepper">
         <view class="stepper-btn" data-delta="-1" bindtap="onCartonsChange">－</view>
         <text class="stepper-num">{{cartons || 1}}</text>
@@ -36,46 +60,16 @@
       </view>
     </view>
     <view class="q-row">
-      <text class="q-label">每箱数量</text>
+      <text class="q-label">每箱数量 pcs in carton</text>
       <text class="q-value">{{product.pcsInCarton}}</text>
     </view>
     <view class="q-row">
-      <text class="q-label">购买数量</text>
+      <text class="q-label">购买数量 Purchase quantity</text>
       <view class="stepper">
         <view class="stepper-btn" data-delta="-1" bindtap="onTotalQtyChange">－</view>
         <text class="stepper-num">{{totalQty || 0}}</text>
         <view class="stepper-btn" data-delta="1" bindtap="onTotalQtyChange">＋</view>
       </view>
-    </view>
-  </view>
-
-  <!-- 主区域保留：每箱重量、总价格（自动计算） -->
-  <view class="summary-section">
-    <view class="summary-row">
-      <text class="label">每箱重量(KG)</text>
-      <text class="value">{{product.grossWeightKg != null ? product.grossWeightKg : '-'}}</text>
-    </view>
-    <view class="summary-row">
-      <text class="label">总价格</text>
-      <text class="value highlight">¥{{amount != null ? amount : '0'}}</text>
-    </view>
-  </view>
-
-  <!-- 折叠：更多详情 -->
-  <view class="collapse-section">
-    <view class="collapse-head" bindtap="toggleDetail">
-      <text class="collapse-title">更多详情</text>
-      <text class="collapse-arrow {{detailExpanded ? 'open' : ''}}">›</text>
-    </view>
-    <view class="collapse-body" wx:if="{{detailExpanded}}">
-      <view class="row"><text class="label">规格</text><text class="value">{{product.size || '-'}}</text></view>
-      <view class="row"><text class="label">颜色</text><text class="value">{{product.color || '-'}}</text></view>
-      <view class="row"><text class="label">材质</text><text class="value">{{product.material || '-'}}</text></view>
-      <view class="row"><text class="label">条形码</text><text class="value">{{product.barcode || '-'}}</text></view>
-      <view class="row"><text class="label">证书类型及代码</text><text class="value">{{product.certificate || '-'}}</text></view>
-      <view class="row"><text class="label">店铺</text><text class="value">{{product.shopNo}}</text></view>
-      <view class="row"><text class="label">箱规(长×宽×高 cm)</text><text class="value">{{product.cartonLongCm}}×{{product.cartonWideCm}}×{{product.cartonHighCm}}</text></view>
-      <view class="row"><text class="label">单箱体积(m³)</text><text class="value">{{product.cubeM3 != null ? product.cubeM3 : '-'}}</text></view>
     </view>
   </view>
 
