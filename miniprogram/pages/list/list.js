@@ -3,6 +3,7 @@ const { sampleProducts } = require('../../utils/sampleProducts.js')
 Page({
   data: {
     products: [],
+    searchKeyword: '',
     sortBy: 'time', // time | category
     filterNewWeek: false
   },
@@ -14,15 +15,46 @@ Page({
       list = sampleProducts
       if (app.globalData) app.globalData.products = list
     }
-    this.setData({ products: this._sortProducts(list) })
+    this._refreshProducts(list)
   },
 
   onShow() {
     const app = getApp()
     const list = (app.globalData && app.globalData.products) || []
     if (list.length > 0) {
-      this.setData({ products: this._sortProducts(this._filter(list)) })
+      this._refreshProducts(list)
     }
+  },
+
+  onSearchInput(e) {
+    this.setData({ searchKeyword: (e.detail.value || '').trim() })
+    const app = getApp()
+    const list = (app.globalData && app.globalData.products) || []
+    this._refreshProducts(list)
+  },
+
+  onSearchConfirm() {
+    // 键盘确认时保持当前结果即可，已在 onSearchInput 中刷新
+  },
+
+  _refreshProducts(fullList) {
+    const list = this._searchFilter(this._filter(fullList))
+    this.setData({ products: this._sortProducts(list) })
+  },
+
+  _searchFilter(list) {
+    const kw = (this.data.searchKeyword || '').trim().toLowerCase()
+    if (!kw) return list
+    return list.filter(p => {
+      const shopNo = (p.shopNo || '').toLowerCase()
+      const itemNo = (p.itemNo || '').toLowerCase()
+      const nameCn = (p.nameCn || '').toLowerCase()
+      const color = (p.color || '').toLowerCase()
+      const size = (p.size || '').toLowerCase()
+      const barcode = (p.barcode || '').toLowerCase()
+      return shopNo.indexOf(kw) >= 0 || itemNo.indexOf(kw) >= 0 || nameCn.indexOf(kw) >= 0 ||
+        color.indexOf(kw) >= 0 || size.indexOf(kw) >= 0 || barcode.indexOf(kw) >= 0
+    })
   },
 
   _filter(list) {
@@ -47,14 +79,16 @@ Page({
 
   onSortChange(e) {
     const sortBy = e.currentTarget.dataset.sort
-    this.setData({ sortBy, products: this._sortProducts(this._filter(this.data.products)) })
+    this.setData({ sortBy })
+    const app = getApp()
+    this._refreshProducts(app.globalData.products || [])
   },
 
   onFilterNewWeek(e) {
     const filterNewWeek = !!e.detail.value.length
+    this.setData({ filterNewWeek })
     const app = getApp()
-    const list = (app.globalData && app.globalData.products) || []
-    this.setData({ filterNewWeek, products: this._sortProducts(filterNewWeek ? this._filter(list) : list) })
+    this._refreshProducts(app.globalData.products || [])
   },
 
   goDetail(e) {

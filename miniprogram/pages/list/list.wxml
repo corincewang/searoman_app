@@ -1,4 +1,14 @@
 <view class="page">
+  <!-- 搜索 -->
+  <view class="search-bar">
+    <input
+      class="search-input"
+      placeholder="搜索货号、店铺、名称…"
+      value="{{searchKeyword}}"
+      bindinput="onSearchInput"
+      bindconfirm="onSearchConfirm"
+    />
+  </view>
   <!-- 筛选栏 -->
   <view class="toolbar">
     <view class="sort">
