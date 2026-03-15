@@ -12,7 +12,7 @@
             <view wx:else class="placeholder">暂无图</view>
           </view>
           <view class="info">
-            <text class="name">{{prod.nameCn}}</text>
+            <text class="name">{{prod.nameCn}}{{prod.nameEn ? ' ' + prod.nameEn : ''}}</text>
             <text class="attrs">{{prod.color || ''}}{{prod.color && prod.size ? ' ' : ''}}{{prod.size || ''}}</text>
             <view class="row"><text class="label">箱数</text><text class="value">{{prod.cartons}}</text></view>
             <view class="row"><text class="label">总数</text><text class="value">×{{prod.totalQty}}</text></view>

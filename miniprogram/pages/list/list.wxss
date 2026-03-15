@@ -90,6 +90,11 @@
   padding: 20rpx;
 }
 
+.card .name-wrap {
+  display: block;
+  min-height: 1.4em;
+}
+
 .card .name {
   font-size: 30rpx;
   font-weight: 500;
@@ -98,6 +103,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card .name-cn {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card .name-en {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 4rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card .spec {
@@ -125,11 +145,18 @@
   color: #999;
 }
 
-.card .shop {
+.card .shop-wrap {
+  margin-top: 8rpx;
+}
+
+.card .shop-line {
   font-size: 22rpx;
   color: #bbb;
   display: block;
-  margin-top: 8rpx;
+}
+
+.card .shop-line:last-child {
+  margin-top: 2rpx;
 }
 
 .empty {

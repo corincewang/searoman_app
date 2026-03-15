@@ -16,7 +16,7 @@
       <view wx:else class="placeholder">暂无图</view>
     </view>
     <view class="brief">
-      <text class="name">{{product.nameCn}}</text>
+      <text class="name">{{product.nameCn}}{{product.nameEn ? ' ' + product.nameEn : ''}}</text>
       <text class="price">¥{{product.price}}</text>
       <view class="meta">
         <text class="item">货号 Item: {{product.itemNo}}</text>

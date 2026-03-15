@@ -1,4 +1,5 @@
 const { parseSheetRows } = require('../../utils/excelParser.js')
+const { translateBatch } = require('../../utils/translate.js')
 
 let XLSX
 try {
@@ -86,13 +87,18 @@ Page({
                 this.setData({ parsing: false })
                 return
               }
-              const app = getApp()
-              app.globalData.products = products
-              try {
-                wx.setStorageSync('products', products)
-              } catch (err) {}
-              wx.showToast({ title: `已解析 ${products.length} 条` })
-              wx.switchTab({ url: '/pages/list/list' })
+              wx.showLoading({ title: '正在翻译商品名称…' })
+              const nameCnList = products.map(p => p.nameCn || '')
+              translateBatch(nameCnList, (enList) => {
+                products.forEach((p, i) => { p.nameEn = (enList[i] || '').trim() || '' })
+                const app = getApp()
+                app.globalData.products = products
+                try { wx.setStorageSync('products', products) } catch (err) {}
+                wx.hideLoading()
+                wx.showToast({ title: `已解析 ${products.length} 条` })
+                wx.switchTab({ url: '/pages/list/list' })
+                this.setData({ parsing: false })
+              })
             } catch (err) {
               wx.showToast({ title: '解析失败：' + (err.message || '未知错误'), icon: 'none' })
             }

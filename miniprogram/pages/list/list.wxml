@@ -36,13 +36,19 @@
         <view wx:else class="placeholder">暂无图</view>
       </view>
       <view class="info">
-        <text class="name">{{item.nameCn}}</text>
+        <view class="name-wrap">
+          <text class="name name-cn">{{item.nameCn}}</text>
+          <text class="name name-en" wx:if="{{item.nameEn}}">{{item.nameEn}}</text>
+        </view>
         <text class="spec">{{item.color || ''}} {{item.size || ''}}</text>
         <view class="row">
           <text class="price">¥{{item.price}}</text>
           <text class="qty">×{{item.totalQty || (item.cartons * item.pcsInCarton)}}</text>
         </view>
-        <text class="shop">店铺 {{item.shopNo}} 货号 {{item.itemNo}}</text>
+        <view class="shop-wrap">
+          <text class="shop-line">店铺 {{item.shopNo}}</text>
+          <text class="shop-line">货号 {{item.itemNo}}</text>
+        </view>
       </view>
     </view>
   </view>
