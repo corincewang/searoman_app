@@ -15,16 +15,16 @@ try {
 
 const schema = require('./excelSchema.js')
 
-/** 表头行（与装箱单模板一致，排除 _exampleFlag） */
+/** 表头行（按 schema 顺序，中英） */
 function getHeaderRow() {
   return schema.columns
-    .filter(c => c.key !== '_exampleFlag')
+    .filter(c => c.key && c.key[0] !== '_')
     .map(c => c.header)
 }
 
 /** 商品对象转 Excel 行（与 schema 列顺序一致） */
 function productToRow(item) {
-  const cols = schema.columns.filter(c => c.key !== '_exampleFlag')
+  const cols = schema.columns.filter(c => c.key && c.key[0] !== '_')
   const row = []
   cols.forEach(col => {
     let val = item[col.key]

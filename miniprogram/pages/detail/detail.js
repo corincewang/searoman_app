@@ -1,7 +1,7 @@
 Page({
   data: {
     product: null,
-    cartons: 1,
+    cartons: 0,
     totalQty: 0,
     amount: 0,
     statusBarHeight: 20
@@ -20,7 +20,7 @@ Page({
       return
     }
     const pcsInCarton = product.pcsInCarton || 1
-    const cartons = Math.max(1, product.cartons || 1)
+    const cartons = Math.max(0, Number(product.cartons))
     const totalQty = cartons * pcsInCarton
     const amount = Math.round(totalQty * (product.price || 0) * 100) / 100
     this.setData({
@@ -40,9 +40,9 @@ Page({
     const product = this.data.product
     if (!product || isNaN(delta)) return
     const pcsInCarton = Number(product.pcsInCarton) || 1
-    let cartons = Number(this.data.cartons) || 1
+    let cartons = Number(this.data.cartons) || 0
     cartons = cartons + delta
-    cartons = Math.max(1, cartons)
+    cartons = Math.max(0, cartons)
     const totalQty = cartons * pcsInCarton
     const amount = Math.round(totalQty * (Number(product.price) || 0) * 100) / 100
     this.setData({ cartons, totalQty, amount })
@@ -53,10 +53,10 @@ Page({
     const product = this.data.product
     if (!product || isNaN(delta)) return
     const pcsInCarton = Number(product.pcsInCarton) || 1
-    let totalQty = Number(this.data.totalQty) || pcsInCarton
+    let totalQty = Number(this.data.totalQty) || 0
     totalQty = totalQty + delta * pcsInCarton
-    totalQty = Math.max(pcsInCarton, totalQty)
-    const cartons = Math.floor(totalQty / pcsInCarton)
+    totalQty = Math.max(0, totalQty)
+    const cartons = pcsInCarton ? Math.floor(totalQty / pcsInCarton) : 0
     const amount = Math.round(totalQty * (Number(product.price) || 0) * 100) / 100
     this.setData({ cartons, totalQty, amount })
   },

@@ -1,7 +1,7 @@
 /**
  * 装箱单 Excel 解析器
- * 输入：表头在第 3 行（0-based index 2），数据从第 5 行起（0-based 4）；第 1-2 行为说明保留
- * 输出：商品对象数组，可直接用于淘宝式列表/详情/购物车
+ * 输入：默认表头第 1 行（index 0）、数据第 2 行起（index 1）；可通过 options 覆盖
+ * 输出：商品对象数组（含 quotationDate、en71CertNo 等），可直接用于列表/详情/购物车
  */
 
 const schema = require('./excelSchema.js')
@@ -30,12 +30,10 @@ function parseString(val) {
 }
 
 /**
- * 判断是否为“示例行”（跳过不进入商品列表）
- * @param {object} rowObj - 本行解析后的对象
- * @returns {boolean}
+ * 判断是否为“示例行”（跳过不进入商品列表，仅当 schema 含 _exampleFlag 时有效）
  */
 function isExampleRow(rowObj) {
-  return !!rowObj._exampleFlag
+  return rowObj.hasOwnProperty('_exampleFlag') && !!rowObj._exampleFlag
 }
 
 /**
@@ -59,13 +57,13 @@ function rowToProduct(row, columns) {
     }
     product[col.key] = value
   })
-  // 自动计算总数量、金额、体积（若 Excel 未填）
-  if (product.totalQty == null && product.cartons != null && product.pcsInCarton != null) {
-    product.totalQty = product.cartons * product.pcsInCarton
-  }
-  if (product.amount == null && product.totalQty != null && product.price != null) {
-    product.amount = Math.round(product.totalQty * product.price * 100) / 100
-  }
+  if (product.quotationDate === undefined) product.quotationDate = ''
+  if (product.en71CertNo === undefined) product.en71CertNo = ''
+  // 订货箱数/数量/金额：解析时一律默认为 0，由客户在详情页从 0 往上加
+  product.cartons = 0
+  product.totalQty = 0
+  product.amount = 0
+  // 体积等仍按 Excel 计算（若未填）
   if (product.cubeM3 == null && product.cartonLongCm != null && product.cartonWideCm != null && product.cartonHighCm != null) {
     product.cubeM3 = Math.round((product.cartonLongCm * product.cartonWideCm * product.cartonHighCm) / 1000000 * 100) / 100
   }
@@ -83,7 +81,7 @@ function rowToProduct(row, columns) {
 function parseSheetRows(rows, options = {}) {
   const headerRowIndex = options.headerRowIndex ?? schema.headerRowIndex
   const dataStartRowIndex = options.dataStartRowIndex ?? schema.dataStartRowIndex
-  const columns = schema.columns.filter(c => c.key !== '_exampleFlag')
+  const columns = schema.columns.filter(c => c.key && c.key[0] !== '_')
 
   const result = []
   if (!rows || rows.length <= dataStartRowIndex) return result

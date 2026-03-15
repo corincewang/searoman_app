@@ -9,7 +9,7 @@
     <view class="nav-right"></view>
   </view>
 
-  <!-- 顶部：图+名称/单价，下面 货号 Item、规格 size、证书（醒目色）+ 小字 -->
+  <!-- 顶部：图+名称/单价，下面 货号 Item、规格 size、证书（醒目色）+ 小字；图片由云后端提供 -->
   <view class="header-card">
     <view class="thumb">
       <image wx:if="{{product.photo}}" src="{{product.photo}}" mode="aspectFill"/>
@@ -20,9 +20,9 @@
       <text class="price">¥{{product.price}}</text>
       <view class="meta">
         <text class="item">货号 Item: {{product.itemNo}}</text>
-        <text class="item">规格 size: {{product.size || '-'}}</text>
+        <text class="item">规格 Size: {{product.size || '-'}}</text>
         <view class="cert-block">
-          <text class="item cert">证书类型及代码 certificate & code: {{product.certificate || '-'}}</text>
+          <text class="item cert">证书&代码 Certificate & Code: {{product.certificate || '-'}}</text>
           <text class="cert-note">*商店可以提供证书</text>
         </view>
       </view>
@@ -31,18 +31,19 @@
 
   <!-- 详情直接展示，按 Excel 顺序，中英文标签 -->
   <view class="detail-section">
-    <view class="row"><text class="label">店铺 shop No</text><text class="value">{{product.shopNo}}</text></view>
-    <view class="row"><text class="label">条形码 Bar code</text><text class="value">{{product.barcode || '-'}}</text></view>
+    <view class="row"><text class="label">店铺 Shop No</text><text class="value">{{product.shopNo}}</text></view>
+    <view class="row"><text class="label">条形码 Bar Code</text><text class="value">{{product.barcode || '-'}}</text></view>
+    <view class="row"><text class="label">规格 Size</text><text class="value">{{product.size || '-'}}</text></view>
     <view class="row"><text class="label">颜色 Color</text><text class="value">{{product.color || '-'}}</text></view>
     <view class="row"><text class="label">材质 Material</text><text class="value">{{product.material || '-'}}</text></view>
-    <view class="row"><text class="label">单箱毛重 gross weight(KG)</text><text class="value">{{product.grossWeightKg != null ? product.grossWeightKg : '-'}}</text></view>
-    <view class="row"><text class="label">箱规 long×wide×high(cm)</text><text class="value">{{product.cartonLongCm || '-'}}×{{product.cartonWideCm || '-'}}×{{product.cartonHighCm || '-'}}</text></view>
-    <view class="row"><text class="label">单箱体积 cube(m³)</text><text class="value">{{product.cubeM3 != null ? product.cubeM3 : '-'}}</text></view>
+    <view class="row"><text class="label">单箱毛重 Gross Weight(KG)</text><text class="value">{{product.grossWeightKg != null ? product.grossWeightKg : '-'}}</text></view>
+    <view class="row"><text class="label">箱规 Long×Wide×High(cm)</text><text class="value">{{product.cartonLongCm || '-'}}×{{product.cartonWideCm || '-'}}×{{product.cartonHighCm || '-'}}</text></view>
+    <view class="row"><text class="label">单箱体积 Cube(m³)</text><text class="value">{{product.cubeM3 != null ? product.cubeM3 : '-'}}</text></view>
+    <view class="row"><text class="label">商品报价日期 Quotation Date</text><text class="value">{{product.quotationDate || '-'}}</text></view>
     <view class="row cert-row">
-      <text class="label">证书类型及代码 certificate & code</text>
+      <text class="label">证书&代码 Certificate & Code</text>
       <text class="value cert-value">{{product.certificate || '-'}}</text>
     </view>
-    <text class="cert-note-block">*商店可以提供证书</text>
     <view class="row amount-row">
       <text class="label">金额 Amount</text>
       <text class="value highlight">¥{{amount != null ? amount : '0'}}</text>
@@ -52,22 +53,22 @@
   <!-- 最下面：总箱数、每箱数量、购买数量（带英文） -->
   <view class="quantity-section">
     <view class="q-row">
-      <text class="q-label">总箱数 Total cartons</text>
+      <text class="q-label">总箱数 Total Cartons</text>
       <view class="stepper">
         <view class="stepper-btn" data-delta="-1" bindtap="onCartonsChange">－</view>
-        <text class="stepper-num">{{cartons || 1}}</text>
+        <text class="stepper-num">{{cartons}}</text>
         <view class="stepper-btn" data-delta="1" bindtap="onCartonsChange">＋</view>
       </view>
     </view>
     <view class="q-row">
-      <text class="q-label">每箱数量 pcs in carton</text>
+      <text class="q-label">每箱数量 Pcs In Carton</text>
       <text class="q-value">{{product.pcsInCarton}}</text>
     </view>
     <view class="q-row">
-      <text class="q-label">购买数量 Purchase quantity</text>
+      <text class="q-label">购买数量 Purchase Quantity</text>
       <view class="stepper">
         <view class="stepper-btn" data-delta="-1" bindtap="onTotalQtyChange">－</view>
-        <text class="stepper-num">{{totalQty || 0}}</text>
+        <text class="stepper-num">{{totalQty}}</text>
         <view class="stepper-btn" data-delta="1" bindtap="onTotalQtyChange">＋</view>
       </view>
     </view>

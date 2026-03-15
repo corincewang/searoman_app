@@ -4,7 +4,6 @@
     <view class="sort">
       <text class="label">排序：</text>
       <text class="tab {{sortBy === 'time' ? 'active' : ''}}" data-sort="time" bindtap="onSortChange">按时间</text>
-      <text class="tab {{sortBy === 'category' ? 'active' : ''}}" data-sort="category" bindtap="onSortChange">按类别</text>
     </view>
     <view class="filter">
       <checkbox-group bindchange="onFilterNewWeek">

@@ -6,7 +6,6 @@ const sampleProducts = [
   {
     id: 'F1-10958_181305_白色_10*4.4',
     shopNo: 'F1-10958',
-    photo: '', // 示例无图时可放占位图路径或后续上传的 URL
     nameCn: '豹猫玩偶',
     certificate: 'CE:ZJ250710112',
     barcode: '6935750093065',
@@ -29,7 +28,6 @@ const sampleProducts = [
   {
     id: 'F1-10958_181305_灰色_10*4.4',
     shopNo: 'F1-10958',
-    photo: '',
     nameCn: '豹猫玩偶',
     certificate: 'CE:ZJ250710112',
     barcode: '6935750093066',
@@ -52,7 +50,6 @@ const sampleProducts = [
   {
     id: 'F1-10959_182001_黑色_12*5',
     shopNo: 'F1-10959',
-    photo: '',
     nameCn: '新款杯子',
     certificate: '',
     barcode: '6935750093070',

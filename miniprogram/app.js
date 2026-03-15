@@ -1,9 +1,16 @@
 const { sampleProducts } = require('./utils/sampleProducts.js')
 
 const EXPORTED_FILES_KEY = 'exportedFiles'
+const PRODUCTS_KEY = 'products'
 
 App({
   onLaunch() {
+    try {
+      const savedProducts = wx.getStorageSync(PRODUCTS_KEY)
+      if (savedProducts && Array.isArray(savedProducts) && savedProducts.length > 0) {
+        this.globalData.products = savedProducts
+      }
+    } catch (e) {}
     if (!this.globalData.products || this.globalData.products.length === 0) {
       this.globalData.products = sampleProducts
     }

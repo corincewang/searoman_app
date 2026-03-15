@@ -33,9 +33,10 @@
 
 ## 三、当前约定
 
-- **表头**：以你提供的 Excel 表头为准（第 1–2 行保留不解析，数据从第 3 或第 4 行表头下一行开始）。  
-- **默认流程**：从「已有填写好的 Excel 表」开始 = 从「解析后的 JSON 商品列表」直接展示淘宝式卡片；上传 Excel 可作为后续步骤接入。  
-- **Excel 的 JSON 与解析**：见 `miniprogram/utils/excelSchema.json` 与 `miniprogram/utils/excelParser.js`。  
+- **表头**：按新表格式，表头第 1 行、数据第 2 行起；所有列按顺序读取，中英表头均保留；新增「商品报价日期 Quotation Date」「对应的EN71证书的编号」。  
+- **默认流程**：从「已有填写好的 Excel 表」开始 = 从「解析后的 JSON 商品列表」直接展示淘宝式卡片；上传 Excel 或 JSON 均可。  
+- **Excel 的 JSON 与解析**：见 `miniprogram/utils/excelSchema.js`（与 excelSchema.json 一致）与 `miniprogram/utils/excelParser.js`。  
+- **Excel 内嵌图片**：小程序内 xlsx 解析无法读出图片。需在电脑上运行 `node scripts/parseExcelWithImages.js <文件.xlsx> [输出.json]`（需先 `npm install`），生成带 base64 图片的 JSON，再在「上传」页选择该 JSON 文件导入即可在列表中显示真实商品图。  
 
 ---
 

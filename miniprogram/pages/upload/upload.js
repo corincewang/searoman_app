@@ -4,11 +4,7 @@ let XLSX
 try {
   XLSX = require('../../utils/xlsx.mini.min.js')
 } catch (e) {
-  try {
-    XLSX = require('xlsx')
-  } catch (e2) {
-    XLSX = null
-  }
+  XLSX = null
 }
 
 function formatTime(ts) {
@@ -41,7 +37,6 @@ Page({
 
   openExported(e) {
     const path = e.currentTarget.dataset.path
-    const name = e.currentTarget.dataset.name
     if (!path) return
     wx.openDocument({
       filePath: path,
@@ -54,41 +49,52 @@ Page({
   },
 
   chooseFile() {
-    if (!XLSX) {
-      wx.showToast({
-        title: '请将 xlsx.mini.min.js 放入 utils 目录',
-        icon: 'none'
-      })
-      return
-    }
     wx.chooseMessageFile({
       count: 1,
       type: 'file',
       extension: ['xlsx', 'xls'],
       success: (res) => {
-        const path = res.tempFiles[0].path
+        const filePath = res.tempFiles[0].path
+        const fileName = (res.tempFiles[0].name || '').toLowerCase()
+        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+          wx.showToast({ title: '请选择 xlsx 或 xls 文件', icon: 'none' })
+          return
+        }
+        if (!XLSX) {
+          wx.showToast({ title: '请将 xlsx.mini.min.js 放入 utils 目录', icon: 'none' })
+          return
+        }
         this.setData({ parsing: true })
         wx.getFileSystemManager().readFile({
-          filePath: path,
+          filePath,
           encoding: 'base64',
           success: (e) => {
             try {
               const wb = XLSX.read(e.data, { type: 'base64' })
               const firstSheetName = wb.SheetNames[0]
               const sheet = wb.Sheets[firstSheetName]
-              const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
-              const products = parseSheetRows(rows)
+              const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+              let products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 1 })
+              if (!products.length && rows.length > 2) {
+                products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 2 })
+              }
+              if (!products.length && rows.length > 3) {
+                products = parseSheetRows(rows, { headerRowIndex: 1, dataStartRowIndex: 3 })
+              }
               if (!products.length) {
-                wx.showToast({ title: '未解析到有效数据行', icon: 'none' })
+                wx.showToast({ title: '未解析到有效数据行，请确认表头在第1行、数据从第2行起', icon: 'none' })
                 this.setData({ parsing: false })
                 return
               }
               const app = getApp()
               app.globalData.products = products
+              try {
+                wx.setStorageSync('products', products)
+              } catch (err) {}
               wx.showToast({ title: `已解析 ${products.length} 条` })
               wx.switchTab({ url: '/pages/list/list' })
             } catch (err) {
-              wx.showToast({ title: '解析失败', icon: 'none' })
+              wx.showToast({ title: '解析失败：' + (err.message || '未知错误'), icon: 'none' })
             }
             this.setData({ parsing: false })
           },
