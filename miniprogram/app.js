@@ -1,3 +1,6 @@
+// 最先加载：为 JSZip 等 npm 包提供 setImmediate（小程序环境没有）
+require('./utils/polyfillSetImmediate.js')
+
 const { sampleProducts } = require('./utils/sampleProducts.js')
 
 const EXPORTED_FILES_KEY = 'exportedFiles'

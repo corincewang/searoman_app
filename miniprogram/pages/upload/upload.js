@@ -1,11 +1,31 @@
+;(function () {
+  if (typeof setImmediate !== 'undefined') return
+  var fn = function (f) { return setTimeout(f, 0) }
+  try { if (typeof global !== 'undefined') global.setImmediate = fn } catch (e) {}
+  try { if (typeof globalThis !== 'undefined') globalThis.setImmediate = fn } catch (e) {}
+  try { if (typeof self !== 'undefined') self.setImmediate = fn } catch (e) {}
+  try { var g = (function () { return this })(); if (g) g.setImmediate = fn } catch (e) {}
+})()
+
 const { parseSheetRows } = require('../../utils/excelParser.js')
 const { translateBatch } = require('../../utils/translate.js')
+const { extractFloatingImagesFromJSZip } = require('../../utils/extractFloatingImagesFromZip.js')
+const { convertProductPhotosToLocalPaths } = require('../../utils/photoUtil.js')
+const { inspectXlsxXlFolder } = require('../../utils/inspectXlsxZip.js')
+const schema = require('../../utils/excelSchema.js')
 
 let XLSX
 try {
   XLSX = require('../../utils/xlsx.mini.min.js')
 } catch (e) {
   XLSX = null
+}
+
+let JSZip
+try {
+  JSZip = require('jszip')
+} catch (e) {
+  JSZip = null
 }
 
 function formatTime(ts) {
@@ -71,6 +91,8 @@ Page({
           encoding: 'base64',
           success: (e) => {
             try {
+              // 用 JSZip 解析 xlsx，在控制台打印 xl/ 下 drawing、rels、media，便于查看 XML 和 rId
+              inspectXlsxXlFolder(e.data, { maxXmlLen: 6000 }).then(() => {})
               const wb = XLSX.read(e.data, { type: 'base64' })
               const firstSheetName = wb.SheetNames[0]
               const sheet = wb.Sheets[firstSheetName]
@@ -87,18 +109,41 @@ Page({
                 this.setData({ parsing: false })
                 return
               }
-              wx.showLoading({ title: '正在翻译商品名称…' })
-              const nameCnList = products.map(p => p.nameCn || '')
-              translateBatch(nameCnList, (enList) => {
-                products.forEach((p, i) => { p.nameEn = (enList[i] || '').trim() || '' })
-                const app = getApp()
-                app.globalData.products = products
-                try { wx.setStorageSync('products', products) } catch (err) {}
-                wx.hideLoading()
-                wx.showToast({ title: `已解析 ${products.length} 条` })
-                wx.switchTab({ url: '/pages/list/list' })
-                this.setData({ parsing: false })
-              })
+              const dataStartRowIndex = schema.dataStartRowIndex ?? 1
+              const photoCol = 1
+              const doTranslateAndFinish = () => {
+                wx.showLoading({ title: '正在翻译商品名称…' })
+                const nameCnList = products.map(p => p.nameCn || '')
+                translateBatch(nameCnList, (enList) => {
+                  products.forEach((p, i) => { p.nameEn = (enList[i] || '').trim() || '' })
+                  const app = getApp()
+                  app.globalData.products = products
+                  try { wx.setStorageSync('products', products) } catch (err) {}
+                  wx.hideLoading()
+                  wx.showToast({ title: `已解析 ${products.length} 条` })
+                  wx.switchTab({ url: '/pages/list/list' })
+                  this.setData({ parsing: false })
+                })
+              }
+              // 用 JSZip 解析 xlsx：.async("string") 读 drawing/rels，.async("base64") 读图片，不依赖 readZipEntry
+              if (!JSZip) {
+                doTranslateAndFinish()
+                return
+              }
+              JSZip.loadAsync(e.data, { base64: true })
+                .then((zip) => extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol))
+                .then((byDataIndex) => {
+                  let assigned = 0
+                  ;(byDataIndex || []).forEach((dataUrl, i) => {
+                    if (dataUrl && products[i]) { products[i].photo = dataUrl; assigned++ }
+                  })
+                  if (typeof console !== 'undefined') console.log('[upload] 浮动图赋值(JSZip)', assigned, '张')
+                  convertProductPhotosToLocalPaths(products, doTranslateAndFinish)
+                })
+                .catch((err) => {
+                  if (typeof console !== 'undefined') console.log('[upload] JSZip 浮动图失败', err && err.message)
+                  doTranslateAndFinish()
+                })
             } catch (err) {
               wx.showToast({ title: '解析失败：' + (err.message || '未知错误'), icon: 'none' })
             }
