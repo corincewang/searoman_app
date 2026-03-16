@@ -35,7 +35,9 @@ function base64DecodeToArrayBuffer(base64Str) {
   return u8.buffer
 }
 
-/** 从 drawing XML 字符串中解析出 [ { row, col, rId } ]，row/col 为 0-based；兼容带命名空间的开闭标签 */
+/** 从 drawing XML 字符串中解析出 [ { row, col, rId } ]，row/col 为 0-based；兼容带命名空间的开闭标签。
+ * 行列采用「图片中心点」所在的单元格：同时读取 from / to 的 row、col，取中点再四舍五入。
+ */
 function parseDrawingXml(xmlStr) {
   const list = []
   if (!xmlStr || typeof xmlStr !== 'string') return list
@@ -43,19 +45,39 @@ function parseDrawingXml(xmlStr) {
   let m
   while ((m = anchorReg.exec(xmlStr)) !== null) {
     const block = m[1]
-    const rowMatch = block.match(/<(?:[\w]+:)?row[^>]*>(\d+)<\/(?:[\w]+:)?row>/i) || block.match(/row[^>]*>(\d+)<\//i)
-    const colMatch = block.match(/<(?:[\w]+:)?col[^>]*>(\d+)<\/(?:[\w]+:)?col>/i) || block.match(/col[^>]*>(\d+)<\//i)
+    // from 区块
+    const fromMatch = block.match(/<(?:[\w]+:)?from[^>]*>([\s\S]*?)<\/(?:[\w]+:)?from>/i)
+    const fromPart = fromMatch ? fromMatch[1] : block
+    const fromRowMatch = fromPart.match(/<(?:[\w]+:)?row[^>]*>(\d+)<\/(?:[\w]+:)?row>/i) || fromPart.match(/row[^>]*>(\d+)<\//i)
+    const fromColMatch = fromPart.match(/<(?:[\w]+:)?col[^>]*>(\d+)<\/(?:[\w]+:)?col>/i) || fromPart.match(/col[^>]*>(\d+)<\//i)
+    // to 区块
+    const toMatch = block.match(/<(?:[\w]+:)?to[^>]*>([\s\S]*?)<\/(?:[\w]+:)?to>/i)
+    const toPart = toMatch ? toMatch[1] : block
+    const toRowMatch = toPart.match(/<(?:[\w]+:)?row[^>]*>(\d+)<\/(?:[\w]+:)?row>/i) || toPart.match(/row[^>]*>(\d+)<\//i)
+    const toColMatch = toPart.match(/<(?:[\w]+:)?col[^>]*>(\d+)<\/(?:[\w]+:)?col>/i) || toPart.match(/col[^>]*>(\d+)<\//i)
+
+    const rowFrom = fromRowMatch ? parseInt(fromRowMatch[1], 10) : (toRowMatch ? parseInt(toRowMatch[1], 10) : null)
+    const rowTo = toRowMatch ? parseInt(toRowMatch[1], 10) : rowFrom
+    const colFrom = fromColMatch ? parseInt(fromColMatch[1], 10) : (toColMatch ? parseInt(toColMatch[1], 10) : null)
+    const colTo = toColMatch ? parseInt(toColMatch[1], 10) : colFrom
+
+    if (rowFrom == null || colFrom == null) continue
+    const rowCenter = (rowFrom + rowTo) / 2
+    const colCenter = (colFrom + colTo) / 2
+    const row = Math.round(rowCenter)
+    const col = Math.round(colCenter)
+
     const embedMatch = block.match(/(?:r:)?embed="(rId\d+)"/i) || block.match(/embed="(rId\d+)"/i)
-    if (rowMatch && colMatch && embedMatch) {
+    if (!isNaN(row) && !isNaN(col) && embedMatch) {
       list.push({
-        row: parseInt(rowMatch[1], 10),
-        col: parseInt(colMatch[1], 10),
+        row,
+        col,
         rId: embedMatch[1]
       })
     }
   }
   if (list.length === 0 && xmlStr.indexOf('rId') >= 0 && typeof console !== 'undefined') {
-    console.log('[floatingImg] drawing 片段(前1200字):', xmlStr.slice(0, 1200))
+
   }
   return list
 }
@@ -143,11 +165,11 @@ function extractFloatingImagesFromZipEntries(entries, dataStartRowIndex, photoCo
   const mediaKeys = keys.filter(k => mediaPathRe.test(k))
 
   if (typeof console !== 'undefined') {
-    console.log('[floatingImg] entries 中相关 key: drawing=', drawingPaths, 'rels=', relsPaths, 'xl/media=', keys.filter(k => k.indexOf('media') >= 0 || /xl[/\\]media/i.test(k)))
+
   }
 
   if (drawingPaths.length === 0) {
-    if (typeof console !== 'undefined') console.log('[floatingImg] 无 drawing 文件')
+
     return result
   }
 
@@ -171,10 +193,10 @@ function extractFloatingImagesFromZipEntries(entries, dataStartRowIndex, photoCo
 
   if (typeof console !== 'undefined') {
     const rIds = [...new Set(rowColToRId.map(x => x.rId))]
-    console.log('[floatingImg] 锚点数=', rowColToRId.length, 'rIds=', rIds.slice(0, 5), 'rels中rId数=', Object.keys(rIdToMedia).length)
+
   }
   if (rowColToRId.length === 0) {
-    if (typeof console !== 'undefined') console.log('[floatingImg] drawing 中未解析到锚点，尝试按 media 顺序对应, mediaKeys=', mediaKeys)
+
     const mediaPaths = keys.filter(k => mediaPathRe.test(k)).sort((a, b) => {
       const na = parseInt((a.match(/\d+/) || [0])[0], 10)
       const nb = parseInt((b.match(/\d+/) || [0])[0], 10)
@@ -187,7 +209,7 @@ function extractFloatingImagesFromZipEntries(entries, dataStartRowIndex, photoCo
       if (dataUrl) byDataIndexFallback[i] = dataUrl
     }
     if (typeof console !== 'undefined' && byDataIndexFallback.filter(Boolean).length === 0) {
-      console.log('[floatingImg] fallback 仍 0 张, mediaPaths=', mediaPaths, '首条 entry.data 类型=', mediaPaths[0] ? (entries[mediaPaths[0]] && typeof entries[mediaPaths[0]].data) : '无')
+
     }
     return byDataIndexFallback
   }
@@ -204,28 +226,35 @@ function extractFloatingImagesFromZipEntries(entries, dataStartRowIndex, photoCo
       const alt = mediaPath.replace(/\//g, '\\')
       entry = entries[alt]
     }
-    if (!entry && typeof console !== 'undefined' && idx === 0) console.log('[floatingImg] 首条 mediaPath=', mediaPath, 'entries里含media的key=', mediaKeyList.slice(0, 5))
+
     if (!entry) continue
     const dataUrl = entryToDataUrl(entry)
-    if (typeof console !== 'undefined' && idx === 0) console.log('[floatingImg] 首条 entry.errMsg=', entry.errMsg, 'data类型=', entry.data ? (entry.data.constructor ? entry.data.constructor.name : typeof entry.data) : 'null', 'dataUrl长=', dataUrl ? dataUrl.length : 0)
+
     if (dataUrl) result.push({ row, col, dataUrl })
   }
 
   result.sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col)
   if (typeof console !== 'undefined') {
-    console.log('[floatingImg] 解析到', result.length, '张, 行列示例', result.slice(0, 3).map(r => ({ row: r.row, col: r.col })))
-    if (result.length === 0) console.log('[floatingImg] entries中xl/media的key=', keys.filter(k => k.indexOf('xl') >= 0 && k.indexOf('media') >= 0))
+
+
   }
 
-  const ROW_TOLERANCE = 1
-  const COL_TOLERANCE = 1
+  // 每行只保留第一张图，避免复制/隐藏锚点导致一行多图
+  const seenRows = new Set()
+  const onePerRow = result.filter(r => {
+    if (seenRows.has(r.row)) return false
+    seenRows.add(r.row)
+    return true
+  })
+
+  const ROW_TOLERANCE = 3
+  const COL_TOLERANCE = 2
   const byDataIndex = []
-  for (const r of result) {
+  for (const r of onePerRow) {
     const dataIndex = r.row - dataStartRowIndex
     if (dataIndex < -ROW_TOLERANCE) continue
-    let di = Math.max(0, dataIndex)
+    const di = Math.max(0, dataIndex)
     if (photoCol != null && Math.abs(r.col - photoCol) > COL_TOLERANCE) continue
-    while (byDataIndex[di]) di++
     byDataIndex[di] = r.dataUrl
   }
   return byDataIndex
@@ -268,7 +297,7 @@ function extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol) {
   }
 
   if (drawingPaths.length === 0) {
-    if (typeof console !== 'undefined') console.log('[floatingImg-JSZip] 无 drawing 文件')
+
     return Promise.resolve(result)
   }
 
@@ -291,10 +320,11 @@ function extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol) {
       })
       if (typeof console !== 'undefined') {
         const rIds = [...new Set(rowColToRId.map(x => x.rId))]
-        console.log('[floatingImg-JSZip] 锚点数=', rowColToRId.length, 'rIds=', rIds.slice(0, 5), 'rels中rId数=', Object.keys(rIdToMedia).length)
+
+
       }
       if (rowColToRId.length === 0) {
-        if (typeof console !== 'undefined') console.log('[floatingImg-JSZip] 未解析到锚点，按 media 顺序对应')
+
         return Promise.all(mediaPathsSorted.map((path, i) =>
           readBase64(path).then((base64) => {
             if (!base64) return null
@@ -322,16 +352,22 @@ function extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol) {
       })).then((items) => {
         const withUrl = items.filter(Boolean)
         withUrl.sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col)
-        if (typeof console !== 'undefined') console.log('[floatingImg-JSZip] 解析到', withUrl.length, '张')
-        const ROW_TOLERANCE = 1
-        const COL_TOLERANCE = 1
+        // 每行只保留第一张图，避免复制/隐藏锚点导致一行多图
+        const seenRows = new Set()
+        const onePerRow = withUrl.filter(r => {
+          if (seenRows.has(r.row)) return false
+          seenRows.add(r.row)
+          return true
+        })
+
+        const ROW_TOLERANCE = 3
+        const COL_TOLERANCE = 2
         const byDataIndex = []
-        withUrl.forEach((r) => {
+        onePerRow.forEach((r) => {
           const dataIndex = r.row - dataStartRowIndex
           if (dataIndex < -ROW_TOLERANCE) return
-          let di = Math.max(0, dataIndex)
+          const di = Math.max(0, dataIndex)
           if (photoCol != null && Math.abs(r.col - photoCol) > COL_TOLERANCE) return
-          while (byDataIndex[di]) di++
           byDataIndex[di] = r.dataUrl
         })
         return byDataIndex

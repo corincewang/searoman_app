@@ -32,7 +32,7 @@
       bindtap="goDetail"
     >
       <view class="thumb">
-        <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFill"/>
+        <image wx:if="{{item.photo}}" src="{{item.photo}}" mode="aspectFit"/>
         <view wx:else class="placeholder">暂无图</view>
       </view>
       <view class="info">

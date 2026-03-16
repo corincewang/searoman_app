@@ -12,7 +12,7 @@
   <!-- 顶部：图+名称/单价，下面 货号 Item、规格 size、证书（醒目色）+ 小字；图片由云后端提供 -->
   <view class="header-card">
     <view class="thumb">
-      <image wx:if="{{product.photo}}" src="{{product.photo}}" mode="aspectFill"/>
+      <image wx:if="{{product.photo}}" src="{{product.photo}}" mode="aspectFit"/>
       <view wx:else class="placeholder">暂无图</view>
     </view>
     <view class="brief">

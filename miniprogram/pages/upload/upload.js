@@ -134,14 +134,15 @@ Page({
                 .then((zip) => extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol))
                 .then((byDataIndex) => {
                   let assigned = 0
+
                   ;(byDataIndex || []).forEach((dataUrl, i) => {
                     if (dataUrl && products[i]) { products[i].photo = dataUrl; assigned++ }
                   })
-                  if (typeof console !== 'undefined') console.log('[upload] 浮动图赋值(JSZip)', assigned, '张')
+
                   convertProductPhotosToLocalPaths(products, doTranslateAndFinish)
                 })
                 .catch((err) => {
-                  if (typeof console !== 'undefined') console.log('[upload] JSZip 浮动图失败', err && err.message)
+
                   doTranslateAndFinish()
                 })
             } catch (err) {
