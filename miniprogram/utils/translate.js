@@ -1,6 +1,13 @@
+/** 只保留英文字母和空格，去掉标点等 */
+function onlyEnAndSpaces(str) {
+  if (str == null || typeof str !== 'string') return ''
+  return str.replace(/[^a-zA-Z\s]/g, '').replace(/\s+/g, ' ').trim()
+}
+
 /**
  * 中文 → 英文翻译（用于商品名称等）
  * 使用 MyMemory 免费 API，需在微信公众平台将 api.mymemory.translated.net 加入 request 合法域名
+ * 返回结果只保留英文和空格，不含标点。
  */
 function translateToEn(zhText, callback) {
   if (!zhText || typeof zhText !== 'string') {
@@ -20,7 +27,7 @@ function translateToEn(zhText, callback) {
     },
     success(res) {
       if (res.statusCode === 200 && res.data && res.data.responseData && res.data.responseData.translatedText) {
-        const en = String(res.data.responseData.translatedText).trim()
+        const en = onlyEnAndSpaces(String(res.data.responseData.translatedText))
         if (callback) callback(en)
       } else {
         if (callback) callback('')

@@ -1,4 +1,8 @@
 <view class="page">
+  <view class="cart-header">
+    <text class="cart-title-zh">购物车</text>
+    <text class="cart-title-en">Cart</text>
+  </view>
   <view class="list" wx:if="{{groups.length > 0}}">
     <view class="shop-group" wx:for="{{groups}}" wx:key="shopNo">
       <view class="shop-header">

@@ -37,21 +37,61 @@ function isExampleRow(rowObj) {
 }
 
 /**
+ * 根据表头行推断列索引映射（表头与 schema 不一致时用）
+ * @param {Array} headerRow - 表头行
+ * @param {Array} columns - schema.columns
+ * @returns {Object|null} key -> index，若匹配到的列不足则返回 null 表示用 schema 固定 index
+ */
+function buildColumnMapFromHeader(headerRow, columns) {
+  if (!headerRow || !Array.isArray(headerRow) || !columns.length) return null
+  const map = {}
+  const headerStr = (i) => String(headerRow[i] ?? '').trim().toLowerCase()
+  for (const col of columns) {
+    if (!col.key || col.key[0] === '_') continue
+    const label = (col.label || '').trim()
+    const header = (col.header || '').trim()
+    const headerLow = header.toLowerCase()
+    for (let i = 0; i < headerRow.length; i++) {
+      const cell = String(headerRow[i] ?? '').trim()
+      const cellLow = cell.toLowerCase().replace(/\s+/g, '')
+      if (label && cell.indexOf(label) >= 0) { map[col.key] = i; break }
+      if (headerLow && cellLow.indexOf(headerLow.replace(/\s+/g, '').slice(0, 8)) >= 0) { map[col.key] = i; break }
+      const firstWord = headerLow.split(/\s+/)[0]
+      if (firstWord && firstWord.length >= 2 && cellLow.indexOf(firstWord) >= 0) { map[col.key] = i; break }
+    }
+    if (map[col.key] == null) map[col.key] = col.index
+  }
+  return map
+}
+
+/**
  * 单行数组 → 按 schema 转成商品对象
  * @param {Array} row - 一行单元格数组
  * @param {Array} columns - schema.columns
+ * @param {Object} [colMap] - 可选，key -> 列 index，不传则用 col.index
  * @returns {object}
  */
-function rowToProduct(row, columns) {
+function rowToProduct(row, columns, colMap) {
   const product = {
-    id: null, // 解析后可生成：shopNo + itemNo + color + size 等组合唯一 id
-    uploadedAt: null // 可选：上传时间，用于“按时间排序/近一周新品”
+    id: null,
+    uploadedAt: null
   }
   columns.forEach(col => {
-    const raw = row[col.index]
+    let idx = (colMap && colMap[col.key] != null) ? colMap[col.key] : col.index
+    if (col.key === 'nameCn') idx = 1
+    if (col.key === 'price') idx = 9
+    const raw = row[idx]
     let value
     if (col.type === 'number') {
       value = parseNumber(raw)
+      if (col.key === 'price' && value == null && raw != null) value = parseNumber(String(raw).replace(/[¥,\s]/g, ''))
+      if (col.key === 'price' && value == null) value = parseNumber(row[8]) || parseNumber(row[10])
+      if (col.key === 'price' && value == null) {
+        for (let j = 0; j < row.length; j++) {
+          const n = parseNumber(row[j])
+          if (n != null && n >= 0.01 && n <= 10000 && n % 1 !== 0) { value = n; break }
+        }
+      }
     } else {
       value = parseString(raw)
     }
@@ -72,6 +112,39 @@ function rowToProduct(row, columns) {
   return product
 }
 
+/** 中文列（证书、规格、颜色、材质）用 zip；index 1 用 zip（图片/中文名都在此列，名字从 index 1 读） */
+const CHINESE_COLUMNS = [2, 3, 6, 7, 8]
+const PHOTO_COLUMN_INDEX = 1
+
+/**
+ * 合并 zip 解析行与 xlsx 解析行：index 1 和中文列用 zip；其余列用 xlsx。合并后名字在 index 1。
+ * @param {Array<Array>} zipRows - readSheetFromZip 得到的二维数组（UTF-8 XML）
+ * @param {Array<Array>} xlsxRows - XLSX.utils.sheet_to_json(header:1) 得到的二维数组
+ * @returns {Array<Array>} 合并后的二维数组
+ */
+function mergeZipAndXlsxRows(zipRows, xlsxRows) {
+  if (!zipRows && !xlsxRows) return []
+  const zip = zipRows || []
+  const xlsx = xlsxRows || []
+  const maxRows = Math.max(zip.length, xlsx.length)
+  const result = []
+  for (let r = 0; r < maxRows; r++) {
+    const zipRow = zip[r] || []
+    const xlsxRow = xlsx[r] || []
+    const maxCols = Math.max(zipRow.length, xlsxRow.length)
+    const row = []
+    for (let c = 0; c < maxCols; c++) {
+      if (c === PHOTO_COLUMN_INDEX || CHINESE_COLUMNS.indexOf(c) >= 0) {
+        row[c] = zipRow[c] !== undefined && zipRow[c] !== '' ? zipRow[c] : (c === PHOTO_COLUMN_INDEX ? '' : xlsxRow[c])
+      } else {
+        row[c] = xlsxRow[c] !== undefined ? xlsxRow[c] : zipRow[c]
+      }
+    }
+    result.push(row)
+  }
+  return result
+}
+
 /**
  * 解析 Excel 表数据（二维数组）为商品列表
  * @param {Array<Array>} rows - 整个 sheet 的二维数组，行=数组，列=单元格
@@ -86,11 +159,13 @@ function parseSheetRows(rows, options = {}) {
   const result = []
   if (!rows || rows.length <= dataStartRowIndex) return result
 
+  const headerRow = rows[headerRowIndex] || []
+  const colMap = buildColumnMapFromHeader(headerRow, schema.columns)
+
   for (let i = dataStartRowIndex; i < rows.length; i++) {
     const row = rows[i] || []
-    const product = rowToProduct(row, schema.columns)
+    const product = rowToProduct(row, schema.columns, colMap)
     if (isExampleRow(product)) continue
-    // 跳过空行：至少要有名称或货号
     if (!product.nameCn && !product.itemNo) continue
     product.uploadedAt = product.uploadedAt || Date.now()
     result.push(product)
@@ -118,5 +193,6 @@ module.exports = {
   parseSheet,
   rowToProduct,
   parseNumber,
-  parseString
+  parseString,
+  mergeZipAndXlsxRows
 }

@@ -7,9 +7,10 @@
   try { var g = (function () { return this })(); if (g) g.setImmediate = fn } catch (e) {}
 })()
 
-const { parseSheetRows } = require('../../utils/excelParser.js')
+const { parseSheetRows, mergeZipAndXlsxRows } = require('../../utils/excelParser.js')
 const { translateBatch } = require('../../utils/translate.js')
 const { extractFloatingImagesFromJSZip } = require('../../utils/extractFloatingImagesFromZip.js')
+const { readSheetFromZip } = require('../../utils/readSheetFromZip.js')
 const { convertProductPhotosToLocalPaths } = require('../../utils/photoUtil.js')
 const { inspectXlsxXlFolder } = require('../../utils/inspectXlsxZip.js')
 const schema = require('../../utils/excelSchema.js')
@@ -37,6 +38,33 @@ function formatTime(ts) {
   const h = String(d.getHours()).padStart(2, '0')
   const min = String(d.getMinutes()).padStart(2, '0')
   return `${y}-${m}-${day} ${h}:${min}`
+}
+
+/** ArrayBuffer 转二进制字符串，供 XLSX.read(..., { type: 'binary' }) 使用 */
+function arrayBufferToBinary(ab) {
+  if (!ab || !ab.byteLength) return ''
+  const u8 = new Uint8Array(ab)
+  let s = ''
+  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i])
+  return s
+}
+
+/** ArrayBuffer 转 base64，供 JSZip.loadAsync 使用 */
+function arrayBufferToBase64(ab) {
+  if (!ab || !ab.byteLength) return ''
+  const u8 = new Uint8Array(ab)
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  let s = ''
+  for (let i = 0; i < u8.length; i += 3) {
+    const a = u8[i]
+    const b = u8[i + 1]
+    const c = u8[i + 2]
+    s += chars[a >> 2]
+    s += chars[((a & 3) << 4) | (b >> 4)]
+    s += b !== undefined ? chars[((b & 15) << 2) | (c >> 6)] : '='
+    s += c !== undefined ? chars[c & 63] : '='
+  }
+  return s
 }
 
 Page({
@@ -88,27 +116,15 @@ Page({
         this.setData({ parsing: true })
         wx.getFileSystemManager().readFile({
           filePath,
-          encoding: 'base64',
           success: (e) => {
             try {
-              // 用 JSZip 解析 xlsx，在控制台打印 xl/ 下 drawing、rels、media，便于查看 XML 和 rId
-              inspectXlsxXlFolder(e.data, { maxXmlLen: 6000 }).then(() => {})
-              const wb = XLSX.read(e.data, { type: 'base64' })
-              const firstSheetName = wb.SheetNames[0]
-              const sheet = wb.Sheets[firstSheetName]
-              const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
-              let products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 1 })
-              if (!products.length && rows.length > 2) {
-                products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 2 })
-              }
-              if (!products.length && rows.length > 3) {
-                products = parseSheetRows(rows, { headerRowIndex: 1, dataStartRowIndex: 3 })
-              }
-              if (!products.length) {
-                wx.showToast({ title: '未解析到有效数据行，请确认表头在第1行、数据从第2行起', icon: 'none' })
+              const ab = e.data
+              if (!ab || !ab.byteLength) {
+                wx.showToast({ title: '读取文件为空', icon: 'none' })
                 this.setData({ parsing: false })
                 return
               }
+              const base64ForZip = arrayBufferToBase64(ab)
               const dataStartRowIndex = schema.dataStartRowIndex ?? 1
               const photoCol = 1
               const doTranslateAndFinish = () => {
@@ -125,30 +141,67 @@ Page({
                   this.setData({ parsing: false })
                 })
               }
-              // 用 JSZip 解析 xlsx：.async("string") 读 drawing/rels，.async("base64") 读图片，不依赖 readZipEntry
-              if (!JSZip) {
-                doTranslateAndFinish()
-                return
-              }
-              JSZip.loadAsync(e.data, { base64: true })
-                .then((zip) => extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol))
-                .then((byDataIndex) => {
-                  let assigned = 0
-
-                  ;(byDataIndex || []).forEach((dataUrl, i) => {
-                    if (dataUrl && products[i]) { products[i].photo = dataUrl; assigned++ }
-                  })
-
-                  convertProductPhotosToLocalPaths(products, doTranslateAndFinish)
-                })
-                .catch((err) => {
-
+              let products
+              const finishWithRows = (rows) => {
+                if (!rows || !rows.length) {
+                  wx.showToast({ title: '未解析到有效数据行，请确认表头在第1行、数据从第2行起', icon: 'none' })
+                  this.setData({ parsing: false })
+                  return
+                }
+                products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 1 })
+                if (!products.length && rows.length > 2) products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 2 })
+                if (!products.length && rows.length > 3) products = parseSheetRows(rows, { headerRowIndex: 1, dataStartRowIndex: 3 })
+                if (!products.length) {
+                  wx.showToast({ title: '未解析到有效数据行，请确认表头在第1行、数据从第2行起', icon: 'none' })
+                  this.setData({ parsing: false })
+                  return
+                }
+                if (!JSZip) {
                   doTranslateAndFinish()
-                })
+                  return
+                }
+                JSZip.loadAsync(base64ForZip, { base64: true })
+                  .then((zip) => extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol))
+                  .then((byDataIndex) => {
+                    ;(byDataIndex || []).forEach((dataUrl, i) => {
+                      if (dataUrl && products[i]) products[i].photo = dataUrl
+                    })
+                    convertProductPhotosToLocalPaths(products, doTranslateAndFinish)
+                  })
+                  .catch(() => doTranslateAndFinish())
+              }
+              if (JSZip) {
+                const getXlsxRows = () => {
+                  const arr = new Uint8Array(ab)
+                  const wb = XLSX.read(arr, { type: 'array', codepage: 65001 })
+                  const sheet = wb.Sheets[wb.SheetNames[0]]
+                  return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+                }
+                JSZip.loadAsync(base64ForZip, { base64: true })
+                  .then((zip) => {
+                    inspectXlsxXlFolder(base64ForZip, { maxXmlLen: 6000 }).then(() => {})
+                    return Promise.all([readSheetFromZip(zip), Promise.resolve(zip)]).then(([rowsFromZip]) => ({ rowsFromZip }))
+                  })
+                  .then(({ rowsFromZip }) => {
+                    const xlsxRows = getXlsxRows()
+                    const merged = mergeZipAndXlsxRows(rowsFromZip, xlsxRows)
+                    console.log('[upload] zip+xlsx 合并: zip行数=', rowsFromZip ? rowsFromZip.length : 0, 'xlsx行数=', xlsxRows.length, '合并后=', merged.length)
+                    finishWithRows(merged.length ? merged : xlsxRows)
+                  })
+                  .catch(() => {
+                    finishWithRows(getXlsxRows())
+                  })
+              } else {
+                const arr = new Uint8Array(ab)
+                const wb = XLSX.read(arr, { type: 'array', codepage: 65001 })
+                const sheet = wb.Sheets[wb.SheetNames[0]]
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+                finishWithRows(rows)
+              }
             } catch (err) {
               wx.showToast({ title: '解析失败：' + (err.message || '未知错误'), icon: 'none' })
+              this.setData({ parsing: false })
             }
-            this.setData({ parsing: false })
           },
           fail: () => {
             this.setData({ parsing: false })
