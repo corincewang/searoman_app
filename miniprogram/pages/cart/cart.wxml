@@ -6,9 +6,9 @@
         <text class="shop-arrow">›</text>
       </view>
       <view class="shop-items">
-        <view class="item" wx:for="{{item.items}}" wx:for-item="prod" wx:key="id" data-id="{{prod.id}}" bindtap="goDetail">
+        <view class="item" wx:for="{{item.items}}" wx:for-item="prod" wx:key="id" data-id="{{prod.id}}" bindtap="goDetail" hover-class="item-hover">
           <view class="thumb">
-            <image wx:if="{{prod.photo}}" src="{{prod.photo}}" mode="aspectFit"/>
+            <image wx:if="{{prod.photo}}" src="{{prod.photo}}" mode="aspectFit" hover-class="none"/>
             <view wx:else class="placeholder">暂无图</view>
           </view>
           <view class="info">
