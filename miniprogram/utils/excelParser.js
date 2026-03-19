@@ -112,12 +112,12 @@ function rowToProduct(row, columns, colMap) {
   return product
 }
 
-/** 中文列（证书、规格、颜色、材质）用 zip；index 1 用 zip（图片/中文名都在此列，名字从 index 1 读） */
-const CHINESE_COLUMNS = [2, 3, 6, 7, 8]
+/** 中文列（含货号、证书、规格、颜色、材质）用 zip；index 1 用 zip（图片/中文名都在此列，名字从 index 1 读） */
+const CHINESE_COLUMNS = [2, 3, 5, 6, 7, 8]
 const PHOTO_COLUMN_INDEX = 1
 
 /**
- * 合并 zip 解析行与 xlsx 解析行：index 1 和中文列用 zip；其余列用 xlsx。合并后名字在 index 1。
+ * 合并 zip 解析行与 xlsx 解析行：index 1 和中文列（含货号）用 zip；其余列用 xlsx。合并后名字在 index 1。
  * @param {Array<Array>} zipRows - readSheetFromZip 得到的二维数组（UTF-8 XML）
  * @param {Array<Array>} xlsxRows - XLSX.utils.sheet_to_json(header:1) 得到的二维数组
  * @returns {Array<Array>} 合并后的二维数组

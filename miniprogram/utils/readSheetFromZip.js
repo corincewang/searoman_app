@@ -30,16 +30,11 @@ function parseSharedStringsXml(xmlStr) {
   let m
   while ((m = siReg.exec(xmlStr)) !== null) {
     const block = m[1]
-    const tMatch = block.match(/<(?:[\w]+:)?t[^>]*>([\s\S]*?)<\/(?:[\w]+:)?t>/)
-    if (tMatch) {
-      list.push(unescapeXml(tMatch[1].trim()))
-      continue
-    }
     const parts = []
     const tAll = block.match(/<(?:[\w]+:)?t[^>]*>([\s\S]*?)<\/(?:[\w]+:)?t>/g)
     if (tAll) {
       tAll.forEach((tag) => {
-        const inner = tag.replace(/<(?:[\w]+:)?t[^>]*>|<\/(?:[\w]+:)?t>/g, '').trim()
+        const inner = tag.replace(/<(?:[\w]+:)?t[^>]*>|<\/(?:[\w]+:)?t>/g, '')
         parts.push(unescapeXml(inner))
       })
     }
@@ -111,8 +106,13 @@ function getCellValue(block, type, sharedStrings) {
     if (!isNaN(idx) && idx >= 0 && idx < sharedStrings.length) return sharedStrings[idx]
   }
   if (type === 'inlinestr' || type === 'inlineStr') {
-    const tMatch = block.match(/<t[^>]*>([\s\S]*?)<\/t>/i) || block.match(/<(?:[\w]+:)?t[^>]*>([\s\S]*?)<\/(?:[\w]+:)?t>/i)
-    if (tMatch) return unescapeXml(tMatch[1].trim())
+    const tags = block.match(/<(?:[\w]+:)?t[^>]*>([\s\S]*?)<\/(?:[\w]+:)?t>/gi) || []
+    if (tags.length) {
+      return tags.map((tag) => {
+        const inner = tag.replace(/<(?:[\w]+:)?t[^>]*>|<\/(?:[\w]+:)?t>/g, '')
+        return unescapeXml(inner)
+      }).join('')
+    }
   }
   if (type !== 's' && type !== 'str') {
     const num = parseFloat(rawVal)

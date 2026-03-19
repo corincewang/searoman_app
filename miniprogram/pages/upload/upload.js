@@ -70,6 +70,8 @@ function arrayBufferToBase64(ab) {
 Page({
   data: {
     parsing: false,
+    importProgress: 0,
+    importStatusText: '',
     exportedFiles: [],
     importHistory: []
   },
@@ -102,6 +104,13 @@ Page({
     })
   },
 
+  _setImportProgress(progress, text) {
+    this.setData({
+      importProgress: Math.max(0, Math.min(100, Number(progress) || 0)),
+      importStatusText: text || ''
+    })
+  },
+
   chooseFile() {
     wx.chooseMessageFile({
       count: 1,
@@ -119,24 +128,25 @@ Page({
           wx.showToast({ title: '请将 xlsx.mini.min.js 放入 utils 目录', icon: 'none' })
           return
         }
-        this.setData({ parsing: true })
+        this.setData({ parsing: true, importProgress: 5, importStatusText: '导入中：准备读取文件…' })
         wx.getFileSystemManager().readFile({
           filePath,
           success: (e) => {
             try {
+              this._setImportProgress(20, '导入中：读取文件完成')
               const importTime = Date.now()
               const importId = `import_${importTime}_${Math.random().toString(36).slice(2)}`
               const ab = e.data
               if (!ab || !ab.byteLength) {
                 wx.showToast({ title: '读取文件为空', icon: 'none' })
-                this.setData({ parsing: false })
+                this.setData({ parsing: false, importProgress: 0, importStatusText: '' })
                 return
               }
               const base64ForZip = arrayBufferToBase64(ab)
               const dataStartRowIndex = schema.dataStartRowIndex ?? 1
               const photoCol = 1
               const doTranslateAndFinish = () => {
-                wx.showLoading({ title: '正在翻译商品名称…' })
+                this._setImportProgress(80, '导入中：正在处理商品名称…')
                 const nameCnList = products.map(p => p.nameCn || '')
                 translateBatch(nameCnList, (enList) => {
                   products.forEach((p, i) => { p.nameEn = (enList[i] || '').trim() || '' })
@@ -176,31 +186,34 @@ Page({
                   app.globalData.productImportBatches = batches
                   app.globalData.pendingFocusBatchId = importId
                   try { wx.setStorageSync('productImportBatches', batches) } catch (err) {}
-                  wx.hideLoading()
+                  this._setImportProgress(100, '导入中：完成')
                   wx.showToast({ title: `已解析 ${products.length} 条` })
                   wx.switchTab({ url: '/pages/list/list' })
-                  this.setData({ parsing: false })
+                  this.setData({ parsing: false, importProgress: 0, importStatusText: '' })
                 })
               }
               let products
               const finishWithRows = (rows) => {
                 if (!rows || !rows.length) {
                   wx.showToast({ title: '未解析到有效数据行，请确认表头在第1行、数据从第2行起', icon: 'none' })
-                  this.setData({ parsing: false })
+                  this.setData({ parsing: false, importProgress: 0, importStatusText: '' })
                   return
                 }
+                this._setImportProgress(45, '导入中：正在解析表格…')
                 products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 1 })
                 if (!products.length && rows.length > 2) products = parseSheetRows(rows, { headerRowIndex: 0, dataStartRowIndex: 2 })
                 if (!products.length && rows.length > 3) products = parseSheetRows(rows, { headerRowIndex: 1, dataStartRowIndex: 3 })
                 if (!products.length) {
                   wx.showToast({ title: '未解析到有效数据行，请确认表头在第1行、数据从第2行起', icon: 'none' })
-                  this.setData({ parsing: false })
+                  this.setData({ parsing: false, importProgress: 0, importStatusText: '' })
                   return
                 }
                 if (!JSZip) {
+                  this._setImportProgress(70, '导入中：正在整理数据…')
                   doTranslateAndFinish()
                   return
                 }
+                this._setImportProgress(60, '导入中：正在提取图片…')
                 JSZip.loadAsync(base64ForZip, { base64: true })
                   .then((zip) => extractFloatingImagesFromJSZip(zip, dataStartRowIndex, photoCol))
                   .then((byDataIndex) => {
@@ -218,6 +231,7 @@ Page({
                   const sheet = wb.Sheets[wb.SheetNames[0]]
                   return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
                 }
+                this._setImportProgress(30, '导入中：正在读取工作表…')
                 JSZip.loadAsync(base64ForZip, { base64: true })
                   .then((zip) => {
                     inspectXlsxXlFolder(base64ForZip, { maxXmlLen: 6000 }).then(() => {})
@@ -233,6 +247,7 @@ Page({
                     finishWithRows(getXlsxRows())
                   })
               } else {
+                this._setImportProgress(35, '导入中：正在读取工作表…')
                 const arr = new Uint8Array(ab)
                 const wb = XLSX.read(arr, { type: 'array', codepage: 65001 })
                 const sheet = wb.Sheets[wb.SheetNames[0]]
@@ -241,11 +256,11 @@ Page({
               }
             } catch (err) {
               wx.showToast({ title: '解析失败：' + (err.message || '未知错误'), icon: 'none' })
-              this.setData({ parsing: false })
+              this.setData({ parsing: false, importProgress: 0, importStatusText: '' })
             }
           },
           fail: () => {
-            this.setData({ parsing: false })
+            this.setData({ parsing: false, importProgress: 0, importStatusText: '' })
             wx.showToast({ title: '读取文件失败', icon: 'none' })
           }
         })

@@ -29,6 +29,36 @@
   margin-top: 0;
 }
 
+.import-progress {
+  margin-top: 16rpx;
+}
+
+.import-progress-text {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.progress-track {
+  margin-top: 10rpx;
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: #ececec;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #07c160;
+  border-radius: 999rpx;
+  transition: width .2s ease;
+}
+
+.import-progress-percent {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
 .import-history-title {
   margin-top: 24rpx;
   font-size: 24rpx;

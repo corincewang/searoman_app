@@ -3,7 +3,14 @@
   <view class="section">
     <view class="title">上传装箱单</view>
     <view class="tip">选择装箱单 Excel 文件，解析后会在「首页」展示为商品列表</view>
-    <button type="primary" bindtap="chooseFile" disabled="{{parsing}}">{{parsing ? '解析中…' : '选择 Excel 文件'}}</button>
+    <button type="primary" bindtap="chooseFile" disabled="{{parsing}}">{{parsing ? '导入中…' : '选择 Excel 文件'}}</button>
+    <view class="import-progress" wx:if="{{parsing}}">
+      <view class="import-progress-text">{{importStatusText}}</view>
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{importProgress}}%;"></view>
+      </view>
+      <view class="import-progress-percent">{{importProgress}}%</view>
+    </view>
     <view class="import-history-title">导入历史</view>
     <view class="import-history-list" wx:if="{{importHistory.length > 0}}">
       <view class="import-history-item" wx:for="{{importHistory}}" wx:key="id">
