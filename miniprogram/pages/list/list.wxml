@@ -43,7 +43,7 @@
         </view>
         <text class="spec">{{item.color || ''}} {{item.size || ''}}</text>
         <view class="row">
-          <text class="price">¥{{item.price}}</text>
+          <text class="price">¥{{item.price != null ? item.price : '-'}}</text>
         </view>
         <view class="shop-wrap">
           <text class="shop-line">店铺 {{item.shopNo}}</text>

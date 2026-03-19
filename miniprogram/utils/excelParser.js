@@ -29,6 +29,54 @@ function parseString(val) {
   return String(val).trim()
 }
 
+function cleanCellText(val) {
+  if (val == null) return ''
+  return String(val)
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\\n/g, ' ')
+    .replace(/\r\n/g, ' ')
+    .replace(/\r/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * 清理商品名称中的 XML/HTML 实体与换行噪声（如 &#10;）。
+ * nameCn 优先保留中文主文本，避免把原表里附带的英文行拼进中文名。
+ */
+function cleanNameText(val, preferChinese) {
+  if (val == null) return ''
+  let s = String(val)
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/&#\d+;?/g, '')
+    .replace(/&#x[0-9a-fA-F]+;?/g, '')
+
+  // 如果单元格里混了中英文两行，中文名只取包含中文的那一行
+  if (preferChinese) {
+    const parts = s.split(/\n+/).map(x => x.trim()).filter(Boolean)
+    const chineseLine = parts.find(x => /[\u4e00-\u9fff]/.test(x))
+    if (chineseLine) s = chineseLine
+  }
+
+  return s.replace(/\s+/g, ' ').trim()
+}
+
 /**
  * 判断是否为“示例行”（跳过不进入商品列表，仅当 schema 含 _exampleFlag 时有效）
  */
@@ -87,13 +135,19 @@ function rowToProduct(row, columns, colMap) {
       if (col.key === 'price' && value == null && raw != null) value = parseNumber(String(raw).replace(/[¥,\s]/g, ''))
       if (col.key === 'price' && value == null) value = parseNumber(row[8]) || parseNumber(row[10])
       if (col.key === 'price' && value == null) {
-        for (let j = 0; j < row.length; j++) {
+        // 避免误抓到体积等小数列：仅在价格附近列做兜底扫描
+        const nearPriceCols = [7, 8, 9, 10, 11, 12]
+        for (let k = 0; k < nearPriceCols.length; k++) {
+          const j = nearPriceCols[k]
+          if (j < 0 || j >= row.length) continue
           const n = parseNumber(row[j])
-          if (n != null && n >= 0.01 && n <= 10000 && n % 1 !== 0) { value = n; break }
+          if (n != null && n >= 0.01 && n <= 10000) { value = n; break }
         }
       }
     } else {
-      value = parseString(raw)
+      value = cleanCellText(parseString(raw))
+      if (col.key === 'nameCn') value = cleanNameText(value, true)
+      if (col.key === 'nameEn') value = cleanNameText(value, false)
     }
     product[col.key] = value
   })
@@ -137,7 +191,8 @@ function mergeZipAndXlsxRows(zipRows, xlsxRows) {
       if (c === PHOTO_COLUMN_INDEX || CHINESE_COLUMNS.indexOf(c) >= 0) {
         row[c] = zipRow[c] !== undefined && zipRow[c] !== '' ? zipRow[c] : (c === PHOTO_COLUMN_INDEX ? '' : xlsxRow[c])
       } else {
-        row[c] = xlsxRow[c] !== undefined ? xlsxRow[c] : zipRow[c]
+        // xlsx 对合并单元格的非首行可能返回空串；空串时回退到 zip（zip 已做合并填充）
+        row[c] = xlsxRow[c] !== undefined && xlsxRow[c] !== '' ? xlsxRow[c] : zipRow[c]
       }
     }
     result.push(row)
@@ -161,12 +216,21 @@ function parseSheetRows(rows, options = {}) {
 
   const headerRow = rows[headerRowIndex] || []
   const colMap = buildColumnMapFromHeader(headerRow, schema.columns)
+  let lastNonNullPrice = null
 
   for (let i = dataStartRowIndex; i < rows.length; i++) {
     const row = rows[i] || []
     const product = rowToProduct(row, schema.columns, colMap)
     if (isExampleRow(product)) continue
     if (!product.nameCn && !product.itemNo) continue
+
+    // Excel 合并单元格（价格跨多行）场景：空价格沿用上一条非空价格
+    if (product.price == null && lastNonNullPrice != null) {
+      product.price = lastNonNullPrice
+    } else if (product.price != null) {
+      lastNonNullPrice = product.price
+    }
+
     product.uploadedAt = product.uploadedAt || Date.now()
     result.push(product)
   }

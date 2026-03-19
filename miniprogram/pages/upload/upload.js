@@ -67,6 +67,17 @@ function arrayBufferToBase64(ab) {
   return s
 }
 
+function cleanTranslatedName(val) {
+  if (val == null) return ''
+  return String(val)
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/\\n/g, ' ')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 Page({
   data: {
     parsing: false,
@@ -149,7 +160,7 @@ Page({
                 this._setImportProgress(80, '导入中：正在处理商品名称…')
                 const nameCnList = products.map(p => p.nameCn || '')
                 translateBatch(nameCnList, (enList) => {
-                  products.forEach((p, i) => { p.nameEn = (enList[i] || '').trim() || '' })
+                  products.forEach((p, i) => { p.nameEn = cleanTranslatedName(enList[i] || '') || '' })
                   // 避免导入后 id 冲突：把“导入批次”前缀拼到每条记录的 id 前面
                   const newProducts = (products || []).map(p => ({
                     ...p,
