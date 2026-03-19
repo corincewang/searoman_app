@@ -1,5 +1,6 @@
 const { sampleProducts } = require('../../utils/sampleProducts.js')
 const PRODUCT_IMPORT_BATCHES_KEY = 'productImportBatches'
+const PAGE_SIZE = 20
 
 function formatTime(ts) {
   if (!ts) return ''
@@ -14,19 +15,23 @@ function formatTime(ts) {
 
 Page({
   data: {
-    allProducts: [],
     products: [],
     batchOptions: [],
     selectedBatchIndex: 0,
     loadedCount: 0,
     totalInBatch: 0,
     hasMore: false,
+    isGlobalSearch: false,
     searchKeyword: '',
     sortBy: 'time', // time | category
     filterNewWeek: false
   },
 
   onLoad() {
+    this._allProducts = []
+    this._searchTimer = null
+    this._currentBatchList = []
+    this._lastDataFingerprint = ''
     this._initData()
   },
 
@@ -36,6 +41,13 @@ Page({
 
   onReachBottom() {
     this.loadMore()
+  },
+
+  onUnload() {
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = null
+    }
   },
 
   _initData() {
@@ -64,7 +76,8 @@ Page({
       const idx = batchOptions.findIndex(b => b.id === prev.id)
       selectedBatchIndex = idx >= 0 ? idx : 0
     }
-    this.setData({ allProducts: list, batchOptions, selectedBatchIndex })
+    this._allProducts = list
+    this.setData({ batchOptions, selectedBatchIndex })
     this._refreshCurrentBatch()
   },
 
@@ -119,8 +132,12 @@ Page({
   },
 
   onSearchInput(e) {
-    this.setData({ searchKeyword: (e.detail.value || '').trim() })
-    this._refreshCurrentBatch()
+    const searchKeyword = (e.detail.value || '').trim()
+    this.setData({ searchKeyword })
+    if (this._searchTimer) clearTimeout(this._searchTimer)
+    this._searchTimer = setTimeout(() => {
+      this._refreshCurrentBatch()
+    }, 120)
   },
 
   onSearchConfirm() {
@@ -128,28 +145,36 @@ Page({
   },
 
   _refreshCurrentBatch() {
-    const { allProducts, batchOptions, selectedBatchIndex } = this.data
+    const { batchOptions, selectedBatchIndex } = this.data
     if (!batchOptions.length) {
-      this.setData({ products: [], loadedCount: 0, totalInBatch: 0, hasMore: false })
+      this.setData({ products: [], loadedCount: 0, totalInBatch: 0, hasMore: false, isGlobalSearch: false })
       return
     }
+    const kw = (this.data.searchKeyword || '').trim()
     const current = batchOptions[selectedBatchIndex]
-    const fullList = (allProducts || []).filter((p) => (p.batchId || 'legacy') === current.id)
+    const fullList = kw
+      ? (this._allProducts || []) // 搜索时全库检索
+      : (this._allProducts || []).filter((p) => (p.batchId || 'legacy') === current.id)
     const sorted = this._sortProducts(this._searchFilter(this._filter(fullList)))
     this._currentBatchList = sorted
-    const firstPage = sorted.slice(0, 40)
-    this.setData({
+    const firstPage = sorted.slice(0, PAGE_SIZE)
+    const nextData = {
       products: firstPage,
       loadedCount: firstPage.length,
       totalInBatch: sorted.length,
-      hasMore: firstPage.length < sorted.length
-    })
+      hasMore: firstPage.length < sorted.length,
+      isGlobalSearch: !!kw
+    }
+    const fingerprint = `${current.id}|${kw}|${this.data.sortBy}|${this.data.filterNewWeek}|${firstPage.length}|${sorted.length}`
+    if (this._lastDataFingerprint === fingerprint && this.data.loadedCount === nextData.loadedCount && this.data.totalInBatch === nextData.totalInBatch) return
+    this._lastDataFingerprint = fingerprint
+    this.setData(nextData)
   },
 
   loadMore() {
     if (!this.data.hasMore) return
     const list = this._currentBatchList || []
-    const nextCount = Math.min(this.data.loadedCount + 40, list.length)
+    const nextCount = Math.min(this.data.loadedCount + PAGE_SIZE, list.length)
     const next = list.slice(0, nextCount)
     this.setData({
       products: next,

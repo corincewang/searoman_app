@@ -23,7 +23,6 @@
         <text class="item">规格 Size: {{product.size || '-'}}</text>
         <view class="cert-block">
           <text class="item cert">证书&代码 Certificate & Code: {{product.certificate || '-'}}</text>
-          <text class="cert-note">*商店可以提供证书</text>
         </view>
       </view>
     </view>
@@ -44,6 +43,7 @@
       <text class="label">证书&代码 Certificate & Code</text>
       <text class="value cert-value">{{product.certificate || '-'}}</text>
     </view>
+    <text class="cert-note-block">*商店可以提供证书</text>
     <view class="row amount-row">
       <text class="label">金额 Amount</text>
       <text class="value highlight">¥{{amount != null ? amount : '0'}}</text>
