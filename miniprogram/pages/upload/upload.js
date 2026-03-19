@@ -70,7 +70,8 @@ function arrayBufferToBase64(ab) {
 Page({
   data: {
     parsing: false,
-    exportedFiles: []
+    exportedFiles: [],
+    importHistory: []
   },
 
   onLoad() {},
@@ -81,7 +82,11 @@ Page({
       ...item,
       timeStr: formatTime(item.time)
     }))
-    this.setData({ exportedFiles: list })
+    const importHistory = (app.globalData.productImportBatches || []).map(item => ({
+      ...item,
+      timeStr: formatTime(item.time)
+    }))
+    this.setData({ exportedFiles: list, importHistory })
   },
 
   openExported(e) {
@@ -104,8 +109,9 @@ Page({
       extension: ['xlsx', 'xls'],
       success: (res) => {
         const filePath = res.tempFiles[0].path
-        const fileName = (res.tempFiles[0].name || '').toLowerCase()
-        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        const sourceFileName = res.tempFiles[0].name || `导入_${Date.now()}.xlsx`
+        const lowerFileName = sourceFileName.toLowerCase()
+        if (!lowerFileName.endsWith('.xlsx') && !lowerFileName.endsWith('.xls')) {
           wx.showToast({ title: '请选择 xlsx 或 xls 文件', icon: 'none' })
           return
         }
@@ -118,6 +124,8 @@ Page({
           filePath,
           success: (e) => {
             try {
+              const importTime = Date.now()
+              const importId = `import_${importTime}_${Math.random().toString(36).slice(2)}`
               const ab = e.data
               if (!ab || !ab.byteLength) {
                 wx.showToast({ title: '读取文件为空', icon: 'none' })
@@ -132,9 +140,42 @@ Page({
                 const nameCnList = products.map(p => p.nameCn || '')
                 translateBatch(nameCnList, (enList) => {
                   products.forEach((p, i) => { p.nameEn = (enList[i] || '').trim() || '' })
+                  // 避免导入后 id 冲突：把“导入批次”前缀拼到每条记录的 id 前面
+                  const newProducts = (products || []).map(p => ({
+                    ...p,
+                    id: `${importId}_${p.id}`,
+                    batchId: importId,
+                    sourceFileName,
+                    uploadedAt: p.uploadedAt || importTime
+                  }))
+
+                  // 合并展示：追加到历史 products，而不是覆盖
+                  let existed = []
+                  try {
+                    const saved = wx.getStorageSync('products')
+                    if (Array.isArray(saved)) existed = saved
+                  } catch (err) {}
+
+                  const combined = existed.concat(newProducts)
                   const app = getApp()
-                  app.globalData.products = products
-                  try { wx.setStorageSync('products', products) } catch (err) {}
+                  app.globalData.products = combined
+                  try { wx.setStorageSync('products', combined) } catch (err) {}
+
+                  let batches = []
+                  try {
+                    const savedBatches = wx.getStorageSync('productImportBatches')
+                    if (Array.isArray(savedBatches)) batches = savedBatches
+                  } catch (err) {}
+                  const newBatch = {
+                    id: importId,
+                    fileName: sourceFileName,
+                    time: importTime,
+                    count: newProducts.length
+                  }
+                  batches.unshift(newBatch)
+                  app.globalData.productImportBatches = batches
+                  app.globalData.pendingFocusBatchId = importId
+                  try { wx.setStorageSync('productImportBatches', batches) } catch (err) {}
                   wx.hideLoading()
                   wx.showToast({ title: `已解析 ${products.length} 条` })
                   wx.switchTab({ url: '/pages/list/list' })

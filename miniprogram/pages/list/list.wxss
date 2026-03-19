@@ -51,6 +51,38 @@
   color: #666;
 }
 
+.batch-bar {
+  margin-top: 12rpx;
+  background: #fff;
+  padding: 16rpx 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.batch-btn {
+  min-width: 88rpx;
+}
+
+.batch-center {
+  min-width: 360rpx;
+  max-width: 420rpx;
+  text-align: center;
+}
+
+.batch-title {
+  display: -webkit-box;
+  font-size: 22rpx;
+  color: #333;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
 .list {
   padding: 20rpx;
   display: flex;
@@ -171,4 +203,11 @@
 
 .empty button {
   margin-top: 32rpx;
+}
+
+.load-more {
+  text-align: center;
+  font-size: 24rpx;
+  color: #999;
+  padding: 20rpx 0 32rpx;
 }

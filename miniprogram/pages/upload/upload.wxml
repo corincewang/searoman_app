@@ -4,6 +4,14 @@
     <view class="title">上传装箱单</view>
     <view class="tip">选择装箱单 Excel 文件，解析后会在「首页」展示为商品列表</view>
     <button type="primary" bindtap="chooseFile" disabled="{{parsing}}">{{parsing ? '解析中…' : '选择 Excel 文件'}}</button>
+    <view class="import-history-title">导入历史</view>
+    <view class="import-history-list" wx:if="{{importHistory.length > 0}}">
+      <view class="import-history-item" wx:for="{{importHistory}}" wx:key="id">
+        <text class="import-history-name">{{item.fileName}}</text>
+        <text class="import-history-time">{{item.timeStr}}</text>
+      </view>
+    </view>
+    <view class="import-history-empty" wx:else>暂无导入历史</view>
   </view>
 
   <!-- 导出的 Excel（购物车导出后存在这里） -->

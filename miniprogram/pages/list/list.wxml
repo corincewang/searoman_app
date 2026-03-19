@@ -22,6 +22,16 @@
     </view>
   </view>
 
+  <view class="batch-bar" wx:if="{{batchOptions.length > 0}}">
+    <button class="batch-btn" size="mini" bindtap="prevBatch" disabled="{{selectedBatchIndex <= 0}}">上页</button>
+    <picker mode="selector" range="{{batchOptions}}" range-key="label" value="{{selectedBatchIndex}}" bindchange="onBatchPickerChange">
+      <view class="batch-center">
+        <text class="batch-title">{{batchOptions[selectedBatchIndex].label}}</text>
+      </view>
+    </picker>
+    <button class="batch-btn" size="mini" bindtap="nextBatch" disabled="{{selectedBatchIndex >= batchOptions.length - 1}}">下页</button>
+  </view>
+
   <!-- 淘宝式卡片列表 -->
   <view class="list" wx:if="{{products.length > 0}}">
     <view
@@ -51,6 +61,10 @@
         </view>
       </view>
     </view>
+  </view>
+  <view class="load-more" wx:if="{{products.length > 0}}">
+    <text wx:if="{{hasMore}}">上拉加载更多（{{loadedCount}} / {{totalInBatch}}）</text>
+    <text wx:else>已加载完当前文件（{{totalInBatch}} 条）</text>
   </view>
 
   <view class="empty" wx:else>

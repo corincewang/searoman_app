@@ -29,6 +29,47 @@
   margin-top: 0;
 }
 
+.import-history-title {
+  margin-top: 24rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.import-history-list {
+  margin-top: 12rpx;
+}
+
+.import-history-item {
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid #f1f1f1;
+}
+
+.import-history-item:last-child {
+  border-bottom: 0;
+}
+
+.import-history-name {
+  display: block;
+  font-size: 24rpx;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-history-time {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #b0b0b0;
+}
+
+.import-history-empty {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #b0b0b0;
+}
+
 .file-list {
   margin-top: 16rpx;
 }

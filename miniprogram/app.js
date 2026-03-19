@@ -5,6 +5,7 @@ const { sampleProducts } = require('./utils/sampleProducts.js')
 
 const EXPORTED_FILES_KEY = 'exportedFiles'
 const PRODUCTS_KEY = 'products'
+const PRODUCT_IMPORT_BATCHES_KEY = 'productImportBatches'
 
 App({
   onLaunch() {
@@ -21,10 +22,16 @@ App({
       const saved = wx.getStorageSync(EXPORTED_FILES_KEY)
       if (saved && Array.isArray(saved)) this.globalData.exportedFiles = saved
     } catch (e) {}
+    try {
+      const savedBatches = wx.getStorageSync(PRODUCT_IMPORT_BATCHES_KEY)
+      if (savedBatches && Array.isArray(savedBatches)) this.globalData.productImportBatches = savedBatches
+    } catch (e) {}
   },
   globalData: {
     products: [],
     cart: [],
-    exportedFiles: [] // 购物车导出的 Excel，在「上传」tab 展示
+    exportedFiles: [], // 购物车导出的 Excel，在「上传」tab 展示
+    productImportBatches: [],
+    pendingFocusBatchId: ''
   }
 })
